@@ -1,0 +1,22 @@
+/* 通用中文阅读样式：干净、易读 */
+body {
+    margin: 0 5%;
+    line-height: 1.6;
+    text-align: justify;
+    font-family: "PingFang SC", "Heiti SC", "Songti SC", serif;
+}
+
+h2.chapter-title {
+    margin: 1.6em 0 1.2em;
+    font-size: 1.4em;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.4;
+    page-break-before: always;
+}
+
+p {
+    margin: 0;
+    text-indent: 2em;       /* 首行缩进两字 */
+    padding: 0.35em 0;      /* 段间距 */
+}
