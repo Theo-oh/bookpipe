@@ -1,4 +1,5 @@
 import sys
+from pathlib import Path
 
 from bookpipe import agent, config
 
@@ -9,7 +10,8 @@ def test_render_plist_has_essentials():
     assert f"<integer>{config.SCAN_INTERVAL_SECONDS}</integer>" in xml
     assert "<string>-m</string>" in xml
     assert "<string>bookpipe</string>" in xml
-    assert sys.executable in xml
+    # 用 venv 内不带版本号的 python 软链，重建 venv 升小版本后路径仍有效。
+    assert str(Path(sys.executable).with_name("python")) in xml
     assert str(config.LOG_FILE) in xml
 
 

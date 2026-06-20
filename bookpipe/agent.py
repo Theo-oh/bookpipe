@@ -10,14 +10,21 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from pathlib import Path
 from xml.sax.saxutils import escape
 
 from bookpipe import config
 
 
 def _render_plist() -> str:
-    """生成 launchd plist。python 路径用安装时的 sys.executable，避免硬编码 venv。"""
-    program_args = [sys.executable, "-m", "bookpipe"]
+    """生成 launchd plist。
+
+    python 路径从安装时的 sys.executable 推导，不硬编码。用同目录下**不带版本号**的
+    `python` 软链（而非 `python3.14`）：它仍是 venv 内的绝对路径、绝不会落到系统 python，
+    但重建 venv 升小版本后路径不变，免得再 `--install-agent`。
+    """
+    python = str(Path(sys.executable).with_name("python"))
+    program_args = [python, "-m", "bookpipe"]
     args_xml = "\n".join(f"\t\t<string>{escape(a)}</string>" for a in program_args)
     log_path = escape(str(config.LOG_FILE))
     return f"""<?xml version="1.0" encoding="UTF-8"?>
