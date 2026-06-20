@@ -67,7 +67,9 @@ def main(argv: list[str] | None = None) -> int:
         from_inbox = True
 
     if not targets:
-        print("没有要处理的 txt。")
+        # 交互式终端给个反馈；定时扫描(stdout 重定向到日志、非 TTY)静默，免得空扫刷屏。
+        if sys.stdout.isatty():
+            print("没有要处理的 txt。")
         return 0
 
     ok, failed = 0, 0

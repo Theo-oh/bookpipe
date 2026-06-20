@@ -1,4 +1,36 @@
-from bookpipe.cli import _safe_filename
+import io
+import sys
+
+from bookpipe import config
+from bookpipe.cli import _safe_filename, main
+
+
+class _FakeTTY(io.StringIO):
+    def isatty(self):
+        return True
+
+
+class _FakePipe(io.StringIO):
+    def isatty(self):
+        return False
+
+
+def test_empty_inbox_silent_when_not_tty(tmp_path, monkeypatch):
+    # 定时扫描场景：stdout 非 TTY，空 Inbox 不应往日志写「没有要处理」噪音。
+    monkeypatch.setattr(config, "INBOX_DIR", tmp_path)
+    out = _FakePipe()
+    monkeypatch.setattr(sys, "stdout", out)
+    assert main([]) == 0
+    assert out.getvalue() == ""
+
+
+def test_empty_inbox_speaks_when_tty(tmp_path, monkeypatch):
+    # 交互式终端仍给反馈。
+    monkeypatch.setattr(config, "INBOX_DIR", tmp_path)
+    out = _FakeTTY()
+    monkeypatch.setattr(sys, "stdout", out)
+    assert main([]) == 0
+    assert "没有要处理" in out.getvalue()
 
 
 def test_safe_filename_replaces_slash():
