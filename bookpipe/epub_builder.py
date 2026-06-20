@@ -11,6 +11,7 @@ from ebooklib import epub
 
 from bookpipe.config import BOOK_LANGUAGE
 from bookpipe.segment import Chapter
+from bookpipe.stats import format_word_count
 
 _CSS_PATH = Path(__file__).parent / "assets" / "style.css"
 
@@ -21,6 +22,7 @@ def build_epub(
     out_path: Path,
     author: str = "未知",
     cover: bytes | None = None,
+    word_count: int | None = None,
 ) -> Path:
     """根据章节列表生成 EPUB 并写到 out_path。"""
     book = epub.EpubBook()
@@ -28,6 +30,8 @@ def build_epub(
     book.set_title(title)
     book.set_language(BOOK_LANGUAGE)
     book.add_author(author)
+    if word_count is not None:
+        book.add_metadata("DC", "description", f"全书约 {format_word_count(word_count)}")
 
     if cover:
         book.set_cover("cover.png", cover)

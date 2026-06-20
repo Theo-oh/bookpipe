@@ -16,6 +16,7 @@ from bookpipe.encoding import question_mark_ratio, read_text
 from bookpipe.epub_builder import build_epub
 from bookpipe.meta import parse_title_author
 from bookpipe.segment import split_chapters
+from bookpipe.stats import count_words, format_word_count
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -92,26 +93,30 @@ def _process(txt: Path, *, dry_run: bool, archive: bool) -> bool:
 
     # 优化2：从文件名解析干净书名 + 作者。
     title, author = parse_title_author(txt.stem)
-    out_path = config.EPUB_DIR / f"{_safe_filename(title)}.epub"
-
-    if out_path.exists() and not dry_run:
-        print(f"• 跳过（已存在）：{out_path.name}")
-        return False
 
     # 优化3：去广告/装饰行。
     text = strip_ad_lines(text)
     chapters = split_chapters(text, default_title=title)
 
+    # 字数统计：去空白后的字符数，写进文件名 + EPUB 元数据，并供预警/报告用。
+    words = count_words(chapters)
+    wc_str = format_word_count(words)
+    out_path = config.EPUB_DIR / f"{_safe_filename(title)}（{wc_str}）.epub"
+
     if dry_run:
         print(
             f"[dry-run] {txt.name} | 编码={encoding} | 书名={title} | "
-            f"作者={author} | 章节={len(chapters)}"
+            f"作者={author} | 章节={len(chapters)} | 字数={wc_str}"
         )
+        return False
+
+    if out_path.exists():
+        print(f"• 跳过（已存在）：{out_path.name}")
         return False
 
     # 优化4：生成简易封面（环境不支持则为 None，不影响转换）。
     cover = make_cover(title, author)
-    build_epub(title, chapters, out_path, author=author, cover=cover)
+    build_epub(title, chapters, out_path, author=author, cover=cover, word_count=words)
     cover_tag = "，含封面" if cover else ""
     print(f"✓ {txt.name} → {out_path.name}（编码 {encoding}，{len(chapters)} 章{cover_tag}）")
 
