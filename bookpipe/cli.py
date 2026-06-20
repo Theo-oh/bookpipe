@@ -9,7 +9,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from bookpipe import config
+from bookpipe import agent, config
 from bookpipe.clean import strip_ad_lines
 from bookpipe.cover import make_cover
 from bookpipe.encoding import question_mark_ratio, read_text
@@ -40,7 +40,23 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="转换成功后不把原 txt 移到归档目录",
     )
+    agent_group = parser.add_mutually_exclusive_group()
+    agent_group.add_argument(
+        "--install-agent",
+        action="store_true",
+        help="安装 launchd 代理：每 10 分钟自动扫 Inbox 转换（无感后台）",
+    )
+    agent_group.add_argument(
+        "--uninstall-agent",
+        action="store_true",
+        help="卸载 launchd 代理，关闭自动转换",
+    )
     args = parser.parse_args(argv)
+
+    if args.install_agent:
+        return agent.install_agent()
+    if args.uninstall_agent:
+        return agent.uninstall_agent()
 
     if args.files:
         targets = args.files

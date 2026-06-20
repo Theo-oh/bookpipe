@@ -15,6 +15,8 @@ BookPipe 把粗糙中文 TXT 小说转成带目录的 EPUB。**纯本地、纯 P
 .venv/bin/ruff check . && .venv/bin/ruff format .   # 改完代码自检 + 格式化
 .venv/bin/bookpipe --dry-run <文件>   # 只看编码/书名/作者/章节数，不写文件
 .venv/bin/bookpipe               # 转换 iCloud Inbox 全部 txt
+.venv/bin/bookpipe --install-agent     # 装 launchd 定时扫描（每 10 分钟无感转换）
+.venv/bin/bookpipe --uninstall-agent   # 卸载
 ```
 
 重装依赖时加 `--no-build-isolation`，否则 pip 会卡在联网重下 setuptools：
@@ -31,6 +33,7 @@ BookPipe 把粗糙中文 TXT 小说转成带目录的 EPUB。**纯本地、纯 P
 - **优雅降级**：封面在 Pillow 或系统中文字体缺失时返回 None 而非报错（cover.py）；损坏文件只跳过当前本、不中断整批（cli.py 失败隔离）。保持这种"绝不因单点失败中断转换"的风格。
 - **EPUB 章节 HTML 不要加 `<?xml?>` 声明**（epub_builder.py `_chapter_html`）：ebooklib 写盘时自行补全，带声明会让 body 提取失效、nav 生成报 "Document is empty"。
 - **分段坚持逐行**（epub_builder.py `_to_paragraphs`）：每个非空行 = 一段、空行忽略。曾试过"按空行分块、块内多行合并"的智能模式，会把"一行一段+偶有空行"的常见排版误并成一大段（极端时一章一段），已废弃。**不要再加这种跨行合并。**
+- **launchd 代理装卸在 `agent.py`**，CLI 入口是 `--install-agent` / `--uninstall-agent`（cli.py 在文件处理前拦截）。配置（`LOG_FILE`、`LAUNCH_AGENT_LABEL`、`LAUNCH_AGENT_PLIST`、`SCAN_INTERVAL_SECONDS`）集中在 config.py。红线：plist 用 `sys.executable` 安装时解析、**不要硬编码 venv 路径**；是 `StartInterval` 冷启动（无常驻进程、跑完即退），同名任务 launchd 天然互斥、长转换不会堆叠；**日志靠 launchd 把 stdout/stderr 重定向到 `LOG_FILE`，别引 logging 框架**。
 
 ## 提交约定
 

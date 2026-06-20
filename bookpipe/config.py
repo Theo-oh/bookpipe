@@ -30,6 +30,14 @@ CHAPTER_PATTERN = re.compile(
 # EPUB 语言
 BOOK_LANGUAGE = "zh-CN"
 
+# launchd 定时扫描代理（`bookpipe --install-agent` 装/卸）。
+# 成败日志由 launchd 把进程 stdout/stderr 追加重定向到此文件，不引 logging 框架。
+LOG_FILE = ICLOUD_READING / "bookpipe.log"
+LAUNCH_AGENT_LABEL = "com.bookpipe"
+LAUNCH_AGENT_PLIST = Path.home() / "Library" / "LaunchAgents" / "com.bookpipe.plist"
+# 扫描间隔（秒）。10 分钟在「及时」与「省」之间取平衡；改这里即可调。
+SCAN_INTERVAL_SECONDS = 600
+
 # 损坏判定：字面 '?' 与替换符占比超过此阈值即视为已损坏文件，拒绝转换。
 CORRUPTION_QUESTION_MARK_RATIO = 0.25
 

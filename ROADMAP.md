@@ -1,19 +1,16 @@
 # ROADMAP / 未来计划
 
-记录已讨论但刻意延后的功能。当前版本是**手动命令式**（跑 `bookpipe` 即转，跑完即退、零后台常驻）。
+记录已讨论但刻意延后的功能。默认仍是**手动命令式**（跑 `bookpipe` 即转，跑完即退、零后台常驻），另已提供可选的 launchd 定时扫描（见下）。
 
-## 1. launchd 自动转换（无感模式）
+## 1. launchd 自动转换（无感模式）✅ 已落地
 
-把"丢进 `01_Inbox_TXT` 就自动转"做成后台服务。两种触发机制：
+`bookpipe --install-agent` 装一个 launchd 定时扫描代理（每 10 分钟扫一次 Inbox 自动转换），`--uninstall-agent` 关掉。实现见 `agent.py`，间隔在 `config.SCAN_INTERVAL_SECONDS`。
 
-| 方案 | 说明 | 取舍 |
-|---|---|---|
-| **定时扫描**（倾向） | launchd 每 N 分钟（如 5 分钟）跑一次 `bookpipe` | 对 iCloud 占位符友好、最稳；代价是最多延迟几分钟 |
-| WatchPaths 实时 | 文件落地立即触发 | 更即时，但 iCloud 同步下来的文件可能还是占位符、触发时没下载完，需额外处理 |
+- 选了**定时扫描**而非 WatchPaths 实时：对 iCloud 占位符最稳（落地文件可能还没下完），代价是最多延迟几分钟。
+- 冷启动跑完即退、无常驻；成败日志追加写到 `Reading/bookpipe.log`。
+- 远程/局域网即时触发（SSH、Tailscale+SSH、Apple 快捷指令）暂不内置——iCloud + 定时扫描已覆盖常见需求，需要时再加。
 
-- 实现：一个 `~/Library/LaunchAgents/com.bookpipe.plist`（约 10 行）+ `launchctl load`。
-- **失败通知**（已定）：成败写日志到 `Reading/bookpipe.log`，按需查看，不打扰。
-- 决策背景：当前选手动是为先把核心跑通；随时可升级，也随时可 `launchctl unload` 关掉。
+后续可选增强：日志轮转（当前只追加不轮转）。
 
 ## 2. 其他可选增强（未承诺）
 
