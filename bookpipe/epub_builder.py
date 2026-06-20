@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import html
+import re
 import uuid
 from pathlib import Path
 
@@ -66,10 +67,8 @@ def build_epub(
 
 
 def _chapter_html(title: str, body: str) -> str:
-    """把纯文本正文转成 XHTML：空行分段，每段一个 <p>。"""
-    paragraphs = [
-        f"<p>{html.escape(block.strip())}</p>" for block in body.split("\n") if block.strip()
-    ]
+    """把纯文本正文转成 XHTML：智能识别分段，每段一个 <p>。"""
+    paragraphs = [f"<p>{html.escape(p)}</p>" for p in _to_paragraphs(body)]
     body_html = "\n".join(paragraphs) if paragraphs else "<p></p>"
     # 不要写 <?xml?> 声明：ebooklib 写盘时会自行补全 XHTML 头，且其 body
     # 提取在带 XML 声明时会失效（导致 nav 生成报 Document is empty）。
@@ -82,3 +81,31 @@ def _chapter_html(title: str, body: str) -> str:
         f"{body_html}\n"
         "</body>\n</html>"
     )
+
+
+# 段落之间的空行（可含全角/半角空白）
+_BLANK_LINE_RE = re.compile(r"\n[ \t　]*\n")
+
+
+def _to_paragraphs(body: str) -> list[str]:
+    """把正文切成段落，自动适配两种常见网文排版：
+
+    - 「段间空行、段内硬换行」：按空行分块，块内多行合并成一段（去掉硬换行）。
+    - 「一行一段、无空行分隔」：每个非空行就是一段。
+
+    判据：只有当按空行切出的块里存在「多行块」时，才认定是前一种格式；
+    否则一律按行分段，避免把"一行一段"的整章误并成一大段。
+    """
+    body = body.strip("\n")
+    if not body:
+        return []
+    blocks = _BLANK_LINE_RE.split(body)
+    has_multiline_block = any(sum(1 for ln in b.split("\n") if ln.strip()) > 1 for b in blocks)
+    if len(blocks) > 1 and has_multiline_block:
+        paras = []
+        for b in blocks:
+            lines = [ln.strip() for ln in b.split("\n") if ln.strip()]
+            if lines:
+                paras.append("".join(lines))
+        return paras
+    return [ln.strip() for ln in body.split("\n") if ln.strip()]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import shutil
 import subprocess
 import sys
@@ -75,17 +76,23 @@ def _process(txt: Path, *, dry_run: bool, archive: bool) -> bool:
     _materialize(txt)
     text, encoding = read_text(txt)
 
-    # 优化1：损坏文件预警 —— 字面 '?' 占比过高直接拒绝，原件留在原处。
+    # 内容过短预警：空文件或未下载完成的 iCloud 占位文件，转了也是空壳，直接拒绝。
+    if len(text.strip()) < config.MIN_CONTENT_CHARS:
+        raise ValueError(
+            "内容为空或过短（可能是空文件或未下载完成的 iCloud 占位文件）。已跳过，未归档。"
+        )
+
+    # 优化1：损坏文件预警 —— 字面 '?' 或替换符占比过高直接拒绝，原件留在原处。
     qm = question_mark_ratio(text)
     if qm > config.CORRUPTION_QUESTION_MARK_RATIO:
         raise ValueError(
-            f"疑似已损坏（{qm:.0%} 是 '?'），多半在转码/另存时被毁；"
+            f"疑似已损坏（{qm:.0%} 是乱码符号），多半在转码/另存时被毁；"
             f"请改用原始下载件。已跳过，未归档。"
         )
 
     # 优化2：从文件名解析干净书名 + 作者。
     title, author = parse_title_author(txt.stem)
-    out_path = config.EPUB_DIR / f"{title}.epub"
+    out_path = config.EPUB_DIR / f"{_safe_filename(title)}.epub"
 
     if out_path.exists() and not dry_run:
         print(f"• 跳过（已存在）：{out_path.name}")
@@ -113,6 +120,18 @@ def _process(txt: Path, *, dry_run: bool, archive: bool) -> bool:
         shutil.move(str(txt), str(config.ARCHIVE_DIR / txt.name))
 
     return True
+
+
+# 文件名里的非法/危险字符：路径分隔符、Windows 保留符、控制字符。
+# 书名本身仍用原文写进 EPUB 元数据，这里只清洗用于落盘的文件名。
+_UNSAFE_FILENAME_RE = re.compile(r'[/\\:*?"<>|\x00-\x1f]')
+
+
+def _safe_filename(name: str) -> str:
+    """把书名清洗成安全的文件名，避免 '/' 等字符把路径带歪或写到意外位置。"""
+    name = _UNSAFE_FILENAME_RE.sub("_", name)
+    name = name.strip(" .　")
+    return name or "未命名"
 
 
 def _materialize(path: Path) -> None:

@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from bookpipe.encoding import read_text
+from bookpipe.encoding import question_mark_ratio, read_text
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -39,3 +39,19 @@ def test_empty_file(tmp_path):
     text, enc = read_text(p)
     assert text == ""
     assert enc == "empty"
+
+
+def test_long_gbk_not_mojibake(tmp_path):
+    # 一整篇 GBK 中文：即便 charset-normalizer 误判，CJK 占比兜底也应解出可读文本。
+    long_cn = ("这是一段很长的中文小说正文，用来确保编码探测不会把它误判成西文。" * 80) + "\n"
+    p = tmp_path / "long_gbk.txt"
+    p.write_bytes(long_cn.encode("gb18030"))
+    text, _ = read_text(p)
+    assert "中文小说正文" in text
+    # 乱码会带来大量替换符 / 西文符号，正确解码后应几乎为零
+    assert question_mark_ratio(text) < 0.01
+
+
+def test_question_mark_ratio_counts_replacement_char():
+    assert question_mark_ratio("���正常") == pytest.approx(3 / 5)
+    assert question_mark_ratio("正常中文文本") == 0.0

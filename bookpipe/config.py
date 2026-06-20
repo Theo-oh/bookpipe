@@ -30,5 +30,8 @@ CHAPTER_PATTERN = re.compile(
 # EPUB 语言
 BOOK_LANGUAGE = "zh-CN"
 
-# 损坏判定：字面 '?' 占比超过此阈值即视为已损坏文件，拒绝转换。
+# 损坏判定：字面 '?' 与替换符占比超过此阈值即视为已损坏文件，拒绝转换。
 CORRUPTION_QUESTION_MARK_RATIO = 0.25
+
+# 内容下限：去空白后不足此字符数即视为空文件 / 未下载完成的占位文件，拒绝转换。
+MIN_CONTENT_CHARS = 10

@@ -36,11 +36,26 @@ def _decode(raw: bytes) -> tuple[str, str]:
     except UnicodeDecodeError:
         pass
 
+    # 收集候选解码，再按"中文字符占比"挑出真正可读的那个。
+    # charset-normalizer 对 GBK 偶尔会判成 latin-1/cp1252 之类——这些编码
+    # 几乎不会解码失败，却会产出整篇乱码且不含 '?'，导致损坏检测也抓不到。
+    # 强制把中文遗留编码一并纳入候选，用 CJK 占比兜底，避免静默产出乱码。
+    candidates: list[tuple[str, str]] = []
     best = from_bytes(raw).best()
     if best is not None:
-        return str(best), best.encoding
+        candidates.append((str(best), best.encoding))
+    for enc in ("gb18030", "big5"):
+        try:
+            candidates.append((raw.decode(enc), enc))
+        except (UnicodeDecodeError, LookupError):
+            continue
 
-    # charset-normalizer 没给出结果时，按中文优先的顺序硬试。
+    if candidates:
+        # 平局时 max 取最先出现者，即优先保留 charset-normalizer 的判断。
+        text, enc = max(candidates, key=lambda c: _cjk_ratio(c[0]))
+        return text, enc
+
+    # 连候选都没有时，按中文优先的顺序硬试。
     for enc in _FALLBACK_ENCODINGS:
         try:
             return raw.decode(enc), enc
@@ -51,15 +66,30 @@ def _decode(raw: bytes) -> tuple[str, str]:
     return raw.decode("utf-8", errors="replace"), "utf-8(replaced)"
 
 
-def question_mark_ratio(text: str) -> float:
-    """返回字面 '?' 占非空白字符的比例，用于判断文件是否已损坏。
+def _cjk_ratio(text: str) -> float:
+    """返回 CJK 统一表意文字占非空白字符的比例，用于在多个候选解码里挑可读的。"""
+    cjk = total = 0
+    for c in text:
+        if c.isspace():
+            continue
+        total += 1
+        if "一" <= c <= "鿿":
+            cjk += 1
+    return cjk / total if total else 0.0
 
-    正常中文文本接近 0；被错误转码毁掉的文件（每个汉字变成 '?'）会非常高。
+
+def question_mark_ratio(text: str) -> float:
+    """返回字面 '?' 与替换符占非空白字符的比例，用于判断文件是否已损坏。
+
+    正常中文文本接近 0；被错误转码毁掉的文件（每个汉字变成 '?' 或替换符
+    ``\\ufffd``）会非常高。两类符号都计入，覆盖"另存为 ASCII"和"解码失败兜底"
+    两种损坏来源。
     """
     non_ws = [c for c in text if not c.isspace()]
     if not non_ws:
         return 0.0
-    return non_ws.count("?") / len(non_ws)
+    damaged = sum(1 for c in non_ws if c == "?" or c == "�")
+    return damaged / len(non_ws)
 
 
 def _normalize(text: str) -> str:
