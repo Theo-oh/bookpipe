@@ -24,7 +24,7 @@ echo 'alias bookpipe="$HOME/Workspace/bookpipe/.venv/bin/bookpipe"' >> ~/.zshrc
 ```bash
 bookpipe                 # 处理 01_Inbox_TXT 里所有 txt，转好放 02，原 txt 归档到 03
 bookpipe 某本.txt         # 只转指定文件（输出到 02，不归档）
-bookpipe --dry-run       # 只看探测到的编码与章节数，不写文件
+bookpipe --dry-run       # 只看探测到的编码/书名/作者/章节数/字数，不写文件
 bookpipe --no-archive    # 转换后不移动原 txt
 ```
 
@@ -49,6 +49,7 @@ bookpipe --no-archive    # 转换后不移动原 txt
 3. **去广告行**：自动清除含网址、「更多好书请访问」等推广行和纯符号装饰行。
 4. **自动封面**：纯色底 + 书名 + 作者，Books 书架上不再是默认灰白图（需 Pillow + 系统中文字体，缺失则自动跳过）。
 5. **重复标题合并**：源文件把章节标题写两遍时自动合并，避免空章节。
+6. **字数统计**：按去空白字符数统计全书字数，写进产物文件名（如 `书名（12.3万字）.epub`）与 EPUB 元数据，「图书」里可见、文件浏览时一眼知篇幅。
 
 ## 测试
 
