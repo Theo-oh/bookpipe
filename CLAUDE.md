@@ -34,3 +34,7 @@ BookPipe 把粗糙中文 TXT 小说转成带目录的 EPUB。**纯本地、纯 P
 ## 提交约定
 
 提交信息用中文（见 git log）。不要加 `Co-Authored-By` 等 AI 署名 trailer。
+
+## 未来计划
+
+延后的功能（launchd 自动转换等）记在 `ROADMAP.md`，需要时再读。
