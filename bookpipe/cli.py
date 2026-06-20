@@ -9,8 +9,11 @@ import sys
 from pathlib import Path
 
 from bookpipe import config
-from bookpipe.encoding import read_text
+from bookpipe.clean import strip_ad_lines
+from bookpipe.cover import make_cover
+from bookpipe.encoding import question_mark_ratio, read_text
 from bookpipe.epub_builder import build_epub
+from bookpipe.meta import parse_title_author
 from bookpipe.segment import split_chapters
 
 
@@ -69,23 +72,41 @@ def main(argv: list[str] | None = None) -> int:
 
 def _process(txt: Path, *, dry_run: bool, archive: bool) -> bool:
     """处理单本 txt。返回 True 表示生成了 epub。"""
-    title = txt.stem
+    _materialize(txt)
+    text, encoding = read_text(txt)
+
+    # 优化1：损坏文件预警 —— 字面 '?' 占比过高直接拒绝，原件留在原处。
+    qm = question_mark_ratio(text)
+    if qm > config.CORRUPTION_QUESTION_MARK_RATIO:
+        raise ValueError(
+            f"疑似已损坏（{qm:.0%} 是 '?'），多半在转码/另存时被毁；"
+            f"请改用原始下载件。已跳过，未归档。"
+        )
+
+    # 优化2：从文件名解析干净书名 + 作者。
+    title, author = parse_title_author(txt.stem)
     out_path = config.EPUB_DIR / f"{title}.epub"
 
     if out_path.exists() and not dry_run:
         print(f"• 跳过（已存在）：{out_path.name}")
         return False
 
-    _materialize(txt)
-    text, encoding = read_text(txt)
+    # 优化3：去广告/装饰行。
+    text = strip_ad_lines(text)
     chapters = split_chapters(text, default_title=title)
 
     if dry_run:
-        print(f"[dry-run] {txt.name} | 编码={encoding} | 章节={len(chapters)}")
+        print(
+            f"[dry-run] {txt.name} | 编码={encoding} | 书名={title} | "
+            f"作者={author} | 章节={len(chapters)}"
+        )
         return False
 
-    build_epub(title, chapters, out_path)
-    print(f"✓ {txt.name} → {out_path.name}（编码 {encoding}，{len(chapters)} 章）")
+    # 优化4：生成简易封面（环境不支持则为 None，不影响转换）。
+    cover = make_cover(title, author)
+    build_epub(title, chapters, out_path, author=author, cover=cover)
+    cover_tag = "，含封面" if cover else ""
+    print(f"✓ {txt.name} → {out_path.name}（编码 {encoding}，{len(chapters)} 章{cover_tag}）")
 
     if archive:
         config.ARCHIVE_DIR.mkdir(parents=True, exist_ok=True)

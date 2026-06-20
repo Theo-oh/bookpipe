@@ -19,6 +19,7 @@ def build_epub(
     chapters: list[Chapter],
     out_path: Path,
     author: str = "未知",
+    cover: bytes | None = None,
 ) -> Path:
     """根据章节列表生成 EPUB 并写到 out_path。"""
     book = epub.EpubBook()
@@ -26,6 +27,9 @@ def build_epub(
     book.set_title(title)
     book.set_language(BOOK_LANGUAGE)
     book.add_author(author)
+
+    if cover:
+        book.set_cover("cover.png", cover)
 
     css = epub.EpubItem(
         uid="style",
@@ -35,7 +39,7 @@ def build_epub(
     )
     book.add_item(css)
 
-    spine: list = ["nav"]
+    spine: list = ["cover", "nav"] if cover else ["nav"]
     toc: list = []
 
     for i, ch in enumerate(chapters, start=1):
@@ -51,8 +55,8 @@ def build_epub(
         toc.append(item)
 
     book.toc = tuple(toc)
-    book.add_item(epub.EpubNcx())   # 旧版 Books 用 NCX
-    book.add_item(epub.EpubNav())   # EPUB3 nav
+    book.add_item(epub.EpubNcx())  # 旧版 Books 用 NCX
+    book.add_item(epub.EpubNav())  # EPUB3 nav
     book.spine = spine
 
     out_path = Path(out_path)
@@ -64,9 +68,7 @@ def build_epub(
 def _chapter_html(title: str, body: str) -> str:
     """把纯文本正文转成 XHTML：空行分段，每段一个 <p>。"""
     paragraphs = [
-        f"<p>{html.escape(block.strip())}</p>"
-        for block in body.split("\n")
-        if block.strip()
+        f"<p>{html.escape(block.strip())}</p>" for block in body.split("\n") if block.strip()
     ]
     body_html = "\n".join(paragraphs) if paragraphs else "<p></p>"
     # 不要写 <?xml?> 声明：ebooklib 写盘时会自行补全 XHTML 头，且其 body

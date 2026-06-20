@@ -6,13 +6,7 @@ import re
 from pathlib import Path
 
 # iCloud Drive 中的 Reading 根目录
-ICLOUD_READING = (
-    Path.home()
-    / "Library"
-    / "Mobile Documents"
-    / "com~apple~CloudDocs"
-    / "Reading"
-)
+ICLOUD_READING = Path.home() / "Library" / "Mobile Documents" / "com~apple~CloudDocs" / "Reading"
 
 INBOX_DIR = ICLOUD_READING / "01_Inbox_TXT"
 EPUB_DIR = ICLOUD_READING / "02_EPUB_Books"
@@ -35,3 +29,6 @@ CHAPTER_PATTERN = re.compile(
 
 # EPUB 语言
 BOOK_LANGUAGE = "zh-CN"
+
+# 损坏判定：字面 '?' 占比超过此阈值即视为已损坏文件，拒绝转换。
+CORRUPTION_QUESTION_MARK_RATIO = 0.25

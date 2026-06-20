@@ -12,13 +12,20 @@ dependencies = [
     "charset-normalizer>=3.3",
     "EbookLib>=0.18",
     "lxml>=5.0",
+    "Pillow>=10.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0"]
+dev = ["pytest>=8.0", "ruff>=0.6"]
 
 [project.scripts]
 bookpipe = "bookpipe.cli:main"
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]  # pycodestyle 错误、pyflakes、import 排序
 
 [tool.setuptools]
 packages = ["bookpipe"]

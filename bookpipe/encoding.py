@@ -51,6 +51,17 @@ def _decode(raw: bytes) -> tuple[str, str]:
     return raw.decode("utf-8", errors="replace"), "utf-8(replaced)"
 
 
+def question_mark_ratio(text: str) -> float:
+    """返回字面 '?' 占非空白字符的比例，用于判断文件是否已损坏。
+
+    正常中文文本接近 0；被错误转码毁掉的文件（每个汉字变成 '?'）会非常高。
+    """
+    non_ws = [c for c in text if not c.isspace()]
+    if not non_ws:
+        return 0.0
+    return non_ws.count("?") / len(non_ws)
+
+
 def _normalize(text: str) -> str:
     """剥离 BOM、统一换行符。"""
     if text and text[0] == "﻿":

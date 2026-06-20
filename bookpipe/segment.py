@@ -28,7 +28,9 @@ def split_chapters(text: str, default_title: str = "正文") -> list[Chapter]:
 
     def flush() -> None:
         if cur_title is not None:
-            chapters.append(Chapter(cur_title, _clean("\n".join(cur_lines))))
+            body = _clean("\n".join(cur_lines))
+            body = _dedup_title(cur_title, body)
+            chapters.append(Chapter(cur_title, body))
 
     for line in lines:
         if CHAPTER_PATTERN.match(line):
@@ -41,6 +43,7 @@ def split_chapters(text: str, default_title: str = "正文") -> list[Chapter]:
             cur_lines.append(line)
 
     flush()
+    chapters = _merge_same_title(chapters)
 
     # 标题前还有正文 → 作为开篇章节放最前面。
     pre_body = _clean("\n".join(pre_lines))
@@ -52,6 +55,33 @@ def split_chapters(text: str, default_title: str = "正文") -> list[Chapter]:
         chapters = [Chapter(default_title, _clean(text))]
 
     return chapters
+
+
+def _merge_same_title(chapters: list[Chapter]) -> list[Chapter]:
+    """合并相邻的同名章节（源文件常把标题行写两遍，产生一个空章节）。"""
+    merged: list[Chapter] = []
+    for ch in chapters:
+        if merged and merged[-1].title == ch.title:
+            prev = merged[-1]
+            body = "\n\n".join(b for b in (prev.body, ch.body) if b)
+            merged[-1] = Chapter(prev.title, body)
+        else:
+            merged.append(ch)
+    return merged
+
+
+def _dedup_title(title: str, body: str) -> str:
+    """若正文首个非空行与章节标题重复，去掉它（源文件常把标题写两遍）。"""
+    if not body:
+        return body
+    lines = body.split("\n")
+    for i, line in enumerate(lines):
+        if not line.strip():
+            continue
+        if line.strip() == title.strip():
+            return "\n".join(lines[i + 1 :]).strip("\n")
+        break
+    return body
 
 
 def _clean(body: str) -> str:
