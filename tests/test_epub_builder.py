@@ -44,10 +44,10 @@ def test_paragraphs_one_line_each():
     assert _to_paragraphs(body) == ["第一段。", "第二段。", "第三段。"]
 
 
-def test_paragraphs_blank_separated_merges_wrapped_lines():
-    # 段间空行、段内硬换行：块内多行合并成一段
-    body = "第一段上半\n第一段下半\n\n第二段独立"
-    assert _to_paragraphs(body) == ["第一段上半第一段下半", "第二段独立"]
+def test_paragraphs_split_per_line_ignoring_blanks():
+    # 逐行成段：每个非空行一段，空行忽略，不做跨行合并
+    body = "第一段\n第二段\n\n第三段"
+    assert _to_paragraphs(body) == ["第一段", "第二段", "第三段"]
 
 
 def test_paragraphs_blank_separated_single_lines():
