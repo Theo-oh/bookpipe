@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import date
 from pathlib import Path
 
 from bookpipe import agent, config
@@ -119,7 +120,7 @@ def _process(txt: Path, *, dry_run: bool, archive: bool) -> bool:
     # 字数统计：去空白后的字符数，写进文件名 + EPUB 元数据，并供预警/报告用。
     words = count_words(chapters)
     wc_str = format_word_count(words)
-    out_path = config.EPUB_DIR / f"{_safe_filename(title)}（{wc_str}）.epub"
+    out_name = f"{_safe_filename(title)}（{wc_str}）.epub"
 
     if dry_run:
         print(
@@ -128,9 +129,16 @@ def _process(txt: Path, *, dry_run: bool, archive: bool) -> bool:
         )
         return False
 
-    if out_path.exists():
-        print(f"• 跳过（已存在）：{out_path.name}")
+    # 查重要跨所有日期子文件夹（及历史平铺位置），保证"02 已有同名 epub 自动跳过"。
+    existing = _find_existing_epub(out_name)
+    if existing:
+        print(f"• 跳过（已存在）：{existing.name}")
         return False
+
+    # 新书按转换日期归入子文件夹，避免新文件淹没在一大堆旧书里。
+    out_dir = config.EPUB_DIR / date.today().isoformat()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / out_name
 
     # 优化4：生成简易封面（环境不支持则为 None，不影响转换）。
     cover = make_cover(title, author)
@@ -143,6 +151,20 @@ def _process(txt: Path, *, dry_run: bool, archive: bool) -> bool:
         shutil.move(str(txt), str(config.ARCHIVE_DIR / txt.name))
 
     return True
+
+
+def _find_existing_epub(name: str) -> Path | None:
+    """在 02 根目录及各日期子文件夹里找同名 epub，跨天也能查重跳过。"""
+    if not config.EPUB_DIR.exists():
+        return None
+    root = config.EPUB_DIR / name
+    if root.exists():
+        return root
+    for sub in config.EPUB_DIR.iterdir():
+        cand = sub / name
+        if sub.is_dir() and cand.exists():
+            return cand
+    return None
 
 
 # 文件名里的非法/危险字符：路径分隔符、Windows 保留符、控制字符。

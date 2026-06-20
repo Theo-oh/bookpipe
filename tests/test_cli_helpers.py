@@ -1,8 +1,9 @@
 import io
 import sys
+from datetime import date
 
 from bookpipe import config
-from bookpipe.cli import _safe_filename, main
+from bookpipe.cli import _find_existing_epub, _process, _safe_filename, main
 
 
 class _FakeTTY(io.StringIO):
@@ -52,3 +53,31 @@ def test_safe_filename_empty_falls_back():
 
 def test_safe_filename_keeps_normal_title():
     assert _safe_filename("某某传") == "某某传"
+
+
+def test_find_existing_epub_across_subfolders(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "EPUB_DIR", tmp_path)
+    assert _find_existing_epub("书.epub") is None  # 目录空
+    sub = tmp_path / "2026-06-20"
+    sub.mkdir()
+    (sub / "书.epub").write_bytes(b"x")
+    found = _find_existing_epub("书.epub")
+    assert found == sub / "书.epub"
+    # 历史平铺在根目录的也能查到
+    (tmp_path / "旧书.epub").write_bytes(b"x")
+    assert _find_existing_epub("旧书.epub") == tmp_path / "旧书.epub"
+
+
+def test_process_writes_into_dated_subfolder(tmp_path, monkeypatch):
+    epub_dir = tmp_path / "02"
+    monkeypatch.setattr(config, "EPUB_DIR", epub_dir)
+    txt = tmp_path / "《测试书》作者：佚名.txt"
+    txt.write_text("第一章 起\n" + "正文内容。\n" * 20, encoding="utf-8")
+
+    assert _process(txt, dry_run=False, archive=False) is True
+    out_dir = epub_dir / date.today().isoformat()
+    epubs = list(out_dir.glob("*.epub"))
+    assert len(epubs) == 1
+    # 再转一次应跨子文件夹查重跳过，不重复生成。
+    assert _process(txt, dry_run=False, archive=False) is False
+    assert len(list(out_dir.glob("*.epub"))) == 1

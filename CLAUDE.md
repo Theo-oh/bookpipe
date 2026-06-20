@@ -26,6 +26,8 @@ BookPipe 把粗糙中文 TXT 小说转成带目录的 EPUB。**纯本地、纯 P
 
 `read_text`(encoding.py) → 损坏预警(question_mark_ratio) → `parse_title_author`(meta.py) → `strip_ad_lines`(clean.py) → `split_chapters`(segment.py) → `count_words`(stats.py，字数进文件名+EPUB 元数据+dry-run) → `build_epub`(epub_builder.py)。新增处理步骤时插进这条链，别绕过 cli.py。
 
+**产物按日期分子文件夹**：epub 写到 `EPUB_DIR/<转换日期>/书名（字数）.epub`（cli.py `_process` 用 `date.today()`），避免新书淹没在一堆旧书里。**查重要跨子文件夹**：`_find_existing_epub` 扫 02 根目录 + 各日期子目录，保证「已有同名 epub 自动跳过」跨天仍成立——改输出位置时别退回只查单层。
+
 ## 改动时务必注意
 
 - **编码探测顺序是刻意的**（encoding.py `_decode`）：先严格 UTF-8 → 再 charset-normalizer → 最后 GB18030 兜底链。严格 UTF-8 优先是为了防止纯 UTF-8 文件被误判成 Shift-JIS，**不要为了"简化"删掉这个快速路径**。

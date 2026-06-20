@@ -48,14 +48,15 @@ bookpipe --uninstall-agent   # 随时关掉
 
 1. 任意设备把下载的 txt 丢进 iCloud `Reading/01_Inbox_TXT/`。
 2. 在 Mac 上跑 `bookpipe`。
-3. epub 出现在 `02_EPUB_Books/`，原 txt 移到 `03_Archive_TXT/`，Inbox 清空。
+3. epub 出现在 `02_EPUB_Books/<转换日期>/`（按日期分子文件夹，新书不被旧书淹没），原 txt 移到 `03_Archive_TXT/`，Inbox 清空。
 4. iCloud 同步后，在 iPhone/iPad/Mac 的「图书」打开 epub，左上角章节目录可用。
 
 ## 设计要点
 
 - **编码**：`charset-normalizer` 主探测 + 严格 UTF-8 优先 + GB18030 兜底链，剥 BOM、统一换行，杜绝乱码。
 - **断章**：正则匹配「第N章/节/回/卷」「序章/楔子/番外」等整行；无标题时整本作单章，永不失败。
-- **幂等**：02 已有同名 epub 自动跳过。**失败隔离**：单本出错不影响其余。
+- **按日期归档**：epub 落进 `02_EPUB_Books/<转换日期>/`（如 `2026-06-21/`），刚转好的当天一组、一眼可见，旧书不动。
+- **幂等**：跨所有日期子文件夹查重，02 里已有同名 epub 自动跳过。**失败隔离**：单本出错不影响其余。
 - **iCloud 占位符**：读取前先 `brctl download` 强制下载。
 
 ## 自动优化（无需配置）
