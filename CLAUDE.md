@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 BookPipe 把粗糙中文 TXT 小说转成带目录的 EPUB。**纯本地、纯 Python、离线、无第三方 App 依赖**——这是刻意的架构红线：不要引入在线 API、Calibre、pandoc 等重型/联网方案（编码与断章都是确定性文本处理，不需要 AI 或外部工具）。
 
+> 这条红线针对**运行时**。开发期用 uv 管依赖（建 venv、装包、`uv.lock` 锁版本）——uv 只是开发工具链，不进运行时、不进 epub 流水线，不违背离线/纯本地红线。构建后端仍是 setuptools，没换。
+
 ## 运行与测试
 
 依赖装在项目本地 venv，**不要用系统 python**：
@@ -19,8 +21,15 @@ BookPipe 把粗糙中文 TXT 小说转成带目录的 EPUB。**纯本地、纯 P
 .venv/bin/bookpipe --uninstall-agent   # 卸载
 ```
 
-重装依赖时加 `--no-build-isolation`，否则 pip 会卡在联网重下 setuptools：
-`.venv/bin/pip install -e . --no-build-isolation`
+依赖用 uv 管理。重建环境 / 重装依赖：
+
+```bash
+uv venv                    # 建 .venv（路径不变）
+uv pip install -e ".[dev]" # 装运行时 + dev（pytest/ruff）依赖
+uv lock                    # 改了依赖后刷新 uv.lock（提交进 git）
+```
+
+uv 带全局缓存，装包近乎离线瞬时——不再需要旧的 `pip install --no-build-isolation` workaround。
 
 ## 架构（单本处理流水线，编排在 `cli.py:_process`）
 

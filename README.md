@@ -8,10 +8,13 @@
 
 ## 安装（Mac mini）
 
+用 [uv](https://docs.astral.sh/uv/) 管理依赖（装包带全局缓存、近乎离线瞬时）：
+
 ```bash
+brew install uv          # 首次需要
 cd ~/Workspace/bookpipe
-python3 -m venv .venv
-.venv/bin/pip install -e .
+uv venv                  # 建 .venv
+uv pip install -e .      # 装依赖；开发再加 ".[dev]"
 ```
 
 可选：加个 alias 方便用
