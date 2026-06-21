@@ -21,12 +21,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "charset-normalizer", specifier = ">=3.3" },
-    { name = "ebooklib", specifier = ">=0.18" },
-    { name = "lxml", specifier = ">=5.0" },
-    { name = "pillow", specifier = ">=10.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.6" },
+    { name = "charset-normalizer", specifier = ">=3.4" },
+    { name = "ebooklib", specifier = ">=0.20" },
+    { name = "lxml", specifier = ">=6.1" },
+    { name = "pillow", specifier = ">=12.0" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0" },
+    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.15" },
 ]
 provides-extras = ["dev"]
 
